@@ -7,12 +7,8 @@
   hosts: hanas
   gather_facts: no
   tasks:
-    - name: Gather host facts
-      ansible.builtin.setup:
-      timeout: 60
-
     - name: find hana role
-      shell: >
+      command: >
         source /usr/sap/HDB/home/.sapenv.sh &&
         hdbnsutil -sr_state
       become: yes
