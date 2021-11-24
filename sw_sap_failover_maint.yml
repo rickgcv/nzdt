@@ -15,6 +15,7 @@
       become: yes
       become_user: hdbadm
       become_method: su
+      become_exe: sudo su -
       register: find_hana_role
 
     - name: set mode and index
