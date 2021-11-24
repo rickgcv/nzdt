@@ -10,10 +10,11 @@
     - name: find hana role
       shell: >
         su -c \"/usr/sap/HDB/HDB00/exe/hdbnsutil -sr_state\" hdbadm
-      args:
-        executable: /bin/bash
-      become: yes
-      become_user: hdbadm
+     # args:
+     #   executable: /bin/bash
+      #become: yes
+      #become_user: hdbadm
+      #become_user: hdbadm
       #become_method: su
       register: find_hana_role
 
