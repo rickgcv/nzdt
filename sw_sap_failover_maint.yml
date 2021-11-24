@@ -9,7 +9,7 @@
   tasks:
     - name: find hana role
       shell: >
-        su -c '/usr/sap/HDB/HDB00/exe/hdbnsutil -sr_state' hdbadm
+        su -c "/usr/sap/HDB/HDB00/exe/hdbnsutil -sr_state" hdbadm
       args:
         executable: /bin/bash
       become: yes
