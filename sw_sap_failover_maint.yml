@@ -12,7 +12,7 @@
         . /usr/sap/HDB/home/.sapenv.sh && hdbnsutil -sr_state
       become: yes
       become_user: hdbadm
-      # #become_method: su
+      become_method: su
       register: find_hana_role
 
     - name: set mode and index
