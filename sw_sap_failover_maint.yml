@@ -9,7 +9,6 @@
   tasks:
     - name: find hana role
       command: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
         hdbnsutil -sr_state
       become: yes
       become_user: hdbadm
