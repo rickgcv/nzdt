@@ -7,41 +7,41 @@
   hosts: hanas
   gather_facts: no
   tasks:
-    - name: find hana role
-      shell: >
-        /usr/sap/HDB/HDB00/exe/hdbnsutil -sr_state
+#    - name: find hana role
+#      shell: >
+#        /usr/sap/HDB/HDB00/exe/hdbnsutil -sr_state
      # args:
      #   executable: /bin/bash
-      become: yes
-      become_user: hdbadm
-      become_method: su
-      become_exe: sudo su -
-      register: find_hana_role
+#      become: yes
+#      become_user: hdbadm
+#      become_method: su
+#      become_exe: sudo su -
+#      register: find_hana_role
 
-    - name: set mode and index
-      set_fact:
-        pcs_mode: "{{ (find_hana_role.stdout_lines | select('match', '^mode: (.*)$') | list)[0] | regex_replace('^mode: (.*)$', '\\1') }}"
-        pcs_site_id: "{{ (find_hana_role.stdout_lines | select('match', '^site id: (.*)$') | list)[0] | default('') | regex_replace('^site id: (.*)$', '\\1') }}"
-    - name: set hana role
-      set_fact:
-        pcs_role: "{{ 'primary' if (pcs_mode == 'primary') else 'secondary' }}"
-        pcs_host_primary: "{{ ansible_hostname if (pcs_mode == 'primary') else 'null'  }}"
-        pcs_host_secondary: "{{ ansible_hostname if (pcs_mode != 'primary') else 'null' }}"
-    - debug:
-        msg: "primary host {{ pcs_host_primary }} and secondary host {{ pcs_host_secondary }}"
-    - debug: 
-        msg: "{{ pcs_role }}"
+#    - name: set mode and index
+#      set_fact:
+#        pcs_mode: "{{ (find_hana_role.stdout_lines | select('match', '^mode: (.*)$') | list)[0] | regex_replace('^mode: (.*)$', '\\1') }}"
+#        pcs_site_id: "{{ (find_hana_role.stdout_lines | select('match', '^site id: (.*)$') | list)[0] | default('') | regex_replace('^site id: (.*)$', '\\1') }}"
+#    - name: set hana role
+#      set_fact:
+#        pcs_role: "{{ 'primary' if (pcs_mode == 'primary') else 'secondary' }}"
+#        pcs_host_primary: "{{ ansible_hostname if (pcs_mode == 'primary') else 'null'  }}"
+#        pcs_host_secondary: "{{ ansible_hostname if (pcs_mode != 'primary') else 'null' }}"
+#    - debug:
+#        msg: "primary host {{ pcs_host_primary }} and secondary host {{ pcs_host_secondary }}"
+#    - debug: 
+#        msg: "{{ pcs_role }}"
 
-    - name: create groups
-      add_host:
-        hostname: "{{ item }}"
-        ansible_hostname: "{{ hostvars[item].ansible_hostname }}"
-        groups: hana_{{ hostvars[item].pcs_role }}
-        sap_hana_role: "{{ hostvars[item].pcs_role }}"
-        sap_hana_site_id: "{{ hostvars[item].pcs_site_id }}"
-      loop: "{{ ansible_play_hosts }}"
-    - debug:
-        msg: "Ansible host name - {{ ansible_hostname }}, hana role{{sap_hana_role}}, site id {{sap_hana_site_id}}"
+#    - name: create groups
+#      add_host:
+#        hostname: "{{ item }}"
+#        ansible_hostname: "{{ hostvars[item].ansible_hostname }}"
+#        groups: hana_{{ hostvars[item].pcs_role }}
+#        sap_hana_role: "{{ hostvars[item].pcs_role }}"
+#        sap_hana_site_id: "{{ hostvars[item].pcs_site_id }}"
+#      loop: "{{ ansible_play_hosts }}"
+#    - debug:
+#        msg: "Ansible host name - {{ ansible_hostname }}, hana role{{sap_hana_role}}, site id {{sap_hana_site_id}}"
 
 
 - name: check replication status (primary)
