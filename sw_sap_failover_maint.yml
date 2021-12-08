@@ -8,7 +8,8 @@
   gather_facts: no
   tasks:
     - name: find hana role
-      shell:
+      shell: >
+        /usr/sap/HDB/HDB00/exe/HDBSettings.sh && 
         /usr/sap/HDB/HDB00/exe/hdbnsutil -sr_state
      # args:
      #   executable: /bin/bash
