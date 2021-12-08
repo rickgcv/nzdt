@@ -44,28 +44,28 @@
 #        msg: "Ansible host name - {{ ansible_hostname }}, hana role{{sap_hana_role}}, site id {{sap_hana_site_id}}"
 
 
-- name: check replication status (primary)
-  hosts: hanadb01
-  gather_facts: no
-  become: yes
-  become_user: hdbadm
+#- name: check replication status (primary)
+#  hosts: hanadb01
+#  gather_facts: no
+#  become: yes
+#  become_user: hdbadm
   #  #become_method: su
-  tasks:
-    - name: ensure replication status is currently ACTIVE
-      shell: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
-        python /usr/sap/HDB/HDB00/exe/python_support/systemReplicationStatus.py
-        | grep '^overall system replication' | cut -d':' -f2 | awk '{$1=$1};1'
-      args:
-        chdir: /usr/sap/HDB/HDB00
-      register: replication_status
+#  tasks:
+#    - name: ensure replication status is currently ACTIVE
+#      shell: >
+#        source /usr/sap/HDB/home/.sapenv.sh &&
+#        python /usr/sap/HDB/HDB00/exe/python_support/systemReplicationStatus.py
+#        | grep '^overall system replication' | cut -d':' -f2 | awk '{$1=$1};1'
+#      args:
+#        chdir: /usr/sap/HDB/HDB00
+#      register: replication_status
       #when: (pcs_host_primary != 'null')
 
-    - name: fail when replication status is not ACTIVE
-      fail:
-        msg: "replication status is not ACTIVE"
+#    - name: fail when replication status is not ACTIVE
+#      fail:
+#        msg: "replication status is not ACTIVE"
         #when: (pcs_host_primary != 'null') and (replication_status.stdout != 'ACTIVE')
-      when: (replication_status.stdout != 'ACTIVE')
+#      when: (replication_status.stdout != 'ACTIVE')
 
 - name: set to maintenance mode (secondary)
   hosts: hanadb02
