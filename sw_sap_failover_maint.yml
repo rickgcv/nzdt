@@ -7,13 +7,13 @@
   hosts: hanas
   gather_facts: no
   tasks:
-#    - name: find hana role
-#      shell: >
-#        /usr/sap/HDB/HDB00/exe/hdbnsutil -sr_state
+    - name: find hana role
+      shell:
+        /usr/sap/HDB/HDB00/exe/hdbnsutil -sr_state
      # args:
      #   executable: /bin/bash
-#      become: yes
-#      become_user: hdbadm
+      become: yes
+      become_user: hdbadm
 #      become_method: su
 #      become_exe: sudo su -
 #      register: find_hana_role
