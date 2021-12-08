@@ -77,9 +77,10 @@
 #      when: (pcs_host_secondary != 'null')
 
     - name: stop system replication
-      shell: >
-#        source /usr/sap/HDB/home/.sapenv.sh &&
+      shell:
         sapcontrol -nr 00 -function StopSystem HDB
+#        source /usr/sap/HDB/home/.sapenv.sh &&
+#        sapcontrol -nr 00 -function StopSystem HDB
       args:
         chdir: /usr/sap/HDB/HDB00
       become: yes
