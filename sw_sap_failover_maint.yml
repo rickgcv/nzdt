@@ -74,7 +74,7 @@
     - name: set to maintenance
       command: pcs property set maintenance-mode=true
       become: yes
-      when: (pcs_host_secondary != 'null')
+#      when: (pcs_host_secondary != 'null')
 
     - name: stop system replication
       shell: >
