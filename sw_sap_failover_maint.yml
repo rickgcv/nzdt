@@ -78,7 +78,7 @@
 
     - name: stop system replication
       shell: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
+#        source /usr/sap/HDB/home/.sapenv.sh &&
         sapcontrol -nr 00 -function StopSystem HDB
       args:
         chdir: /usr/sap/HDB/HDB00
