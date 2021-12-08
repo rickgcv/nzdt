@@ -84,7 +84,7 @@
         chdir: /usr/sap/HDB/HDB00
       become: yes
       become_user: hdbadm
-      when: (pcs_host_secondary != 'null')
+#      when: (pcs_host_secondary != 'null')
        #become_method: su
 
 #Prep to failover
