@@ -9,7 +9,7 @@
   tasks:
     - name: find hana role
       shell: >
-        /usr/sap/HDB/HDB00/HDBSettings.sh && 
+        /usr/sap/HDB/home/.sapenv.sh && 
         /usr/sap/HDB/HDB00/exe/hdbnsutil -sr_state
      # args:
      #   executable: /bin/bash
