@@ -5,17 +5,14 @@
 - name: assign groups
   #hosts: hanas
   hosts: hanas
-  gather_facts: no
+  gather_facts: yes
   tasks:
     - name: find hana role
-      shell: >
+      shell: |
+        source /usr/sap/HDB/HDB00/hdbenv.sh
         /usr/sap/HDB/HDB00/exe/hdbnsutil -sr_state
-     # args:
-     #   executable: /bin/bash
       become: yes
       become_user: hdbadm
-      become_method: su
-      become_exe: sudo su -
       register: find_hana_role
 
     - name: set mode and index
@@ -45,7 +42,7 @@
 
 
 - name: check replication status (primary)
-  hosts: hanadb01
+  hosts: hanas
   gather_facts: no
   become: yes
   become_user: hdbadm
@@ -53,22 +50,22 @@
   tasks:
     - name: ensure replication status is currently ACTIVE
       shell: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
+        source /usr/sap/HDB/HDB00/hdbenv.sh &&
         python /usr/sap/HDB/HDB00/exe/python_support/systemReplicationStatus.py
         | grep '^overall system replication' | cut -d':' -f2 | awk '{$1=$1};1'
       args:
         chdir: /usr/sap/HDB/HDB00
       register: replication_status
-      #when: (pcs_host_primary != 'null')
+      when: (pcs_host_primary != 'null')
 
     - name: fail when replication status is not ACTIVE
       fail:
         msg: "replication status is not ACTIVE"
-        #when: (pcs_host_primary != 'null') and (replication_status.stdout != 'ACTIVE')
-      when: (replication_status.stdout != 'ACTIVE')
+      when: (pcs_host_primary != 'null') and (replication_status.stdout != 'ACTIVE')
+#      when: (replication_status.stdout != 'ACTIVE')
 
 - name: set to maintenance mode (secondary)
-  hosts: hanadb02
+  hosts: hanas
   gather_facts: no
   tasks:
     - name: set to maintenance
@@ -77,8 +74,8 @@
       when: (pcs_host_secondary != 'null')
 
     - name: stop system replication
-      shell: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
+      shell: |
+        source /usr/sap/HDB/HDB00/hdbenv.sh
         sapcontrol -nr 00 -function StopSystem HDB
       args:
         chdir: /usr/sap/HDB/HDB00
@@ -89,14 +86,14 @@
 
 #Prep to failover
 - name: unregister secondary (secondary)
-  hosts: hanadb02
+  hosts: hanas
   become: yes
   become_user: hdbadm
    # #become_method: su
   tasks:
     - name: unregister site
-      shell: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
+      shell: |
+        source /usr/sap/HDB/HDB00/hdbenv.sh
         hdbnsutil -sr_unregister --id=2
       args:
         chdir: /usr/sap/HDB/HDB00
@@ -111,47 +108,57 @@
       delay: 5
 
    # - name: HDB start
-    #  shell: >
-    #    source /usr/sap/HDB/home/.sapenv.sh &&
-   #     HDB start
+    #  shell: |
+     #   source /usr/sap/HDB/HDB00/hdbenv.sh
+      #  HDB start
   #    args:
    #     chdir: /usr/sap/HDB/HDB00
     #  register: hdb_start
- #     when:
-  #      - pcs_host_secondary != 'null'     
-   #     - sap_hana_site_id != ''
-    #    - unregister_site.rc == 0
-     # failed_when:
-      #  - hdb_start.rc > 0
-       # - ('process hdbdaemon HDB Daemon not running' not in hdb_start.stdout)
+     # when:
+      #  - pcs_host_secondary != 'null'     
+       # - sap_hana_site_id != ''
+ #       - unregister_site.rc == 0
+  #    failed_when:
+   #     - hdb_start.rc > 0
+    #    - ('process hdbdaemon HDB Daemon not running' not in hdb_start.stdout)
 
 
 - name: upgrade (secondary)
-  hosts: hanadb02
+  hosts: hanas
   roles:
     - role: oatakan.rhel_upgrade
       update_reboot_kernel: yes
       become: no
+      when: (pcs_host_secondary != 'null')
 
 - name: Ensure HDB is stopped on the secondary node before register to hanadb01 hsr
-  hosts: hanadb02
+  hosts: hanas
   become: yes
   become_user: hdbadm
   tasks:  
-    - name: stop HDB on hanadb02
-      shell: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
+    - name: stop HDB on secondary
+      shell: |
+        source /usr/sap/HDB/HDB00/hdbenv.sh
         HDB stop
       args:
         chdir: /usr/sap/HDB/HDB00
+      when: (pcs_host_secondary != 'null')
+   
+    - name: Get primary hostname
+      set_fact:
+        primary: "{{ 'hanadb02' if (inventory_hostname == 'hanadb01' and (pcs_host_secondary != 'null')) else 'hanadb01' }}"
+        secondary: "{{ 'hanadb01' if (inventory_hostname  == 'hanadb02' and (pcs_host_primary != 'null')) else 'hanadb02' }}"
+
+    - debug:
+        msg: "primary is {{ primary }} seconday is {{ secondary }} pcs_host_primary is {{ pcs_host_primary }} and pcs_host_secondary is {{ pcs_host_secondary }}"   
 
     - name: re-register secondary site after upgrade
       shell: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
-        hdbnsutil -sr_register --name=SITE2
-        --remoteHost=hanadb01
-        --remoteInstance=00
-        --replicationMode=syncmem
+        source /usr/sap/HDB/HDB00/hdbenv.sh &&
+        hdbnsutil -sr_register --name=SITE2 
+        --remoteHost={{ primary }} 
+        --remoteInstance=00 
+        --replicationMode=syncmem 
         --operationMode=logreplay
       args:
         chdir: /usr/sap/HDB/HDB00
@@ -159,12 +166,19 @@
       become: yes
       become_user: hdbadm
       #  # #become_method: su
-      ignore_errors: yes
+      #ignore_errors: yes
       when: (pcs_host_secondary != 'null')
+      failed_when:
+        - ('updating local ini files' not in reregister_site.stdout)
+      until: reregister_site is success
+
+    #- name: reboot system
+     # reboot:
+     # become: yes
 
     - name: HDB start
-      shell: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
+      shell: |
+        source /usr/sap/HDB/HDB00/hdbenv.sh
         HDB start
       args:
         chdir: /usr/sap/HDB/HDB00
@@ -174,15 +188,15 @@
      #  ignore_errors: yes
       when: (pcs_host_secondary != 'null')
 
-
 #2.2.2
 - name: wait for system replication (primary)
-  hosts: hanadb01
+  gather_facts: yes
+  hosts: hanas
 
   tasks:
     - name: wait until system replication status is active
       shell: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
+        source /usr/sap/HDB/HDB00/hdbenv.sh &&
         python /usr/sap/HDB/HDB00/exe/python_support/systemReplicationStatus.py
         | grep '^overall system replication' | cut -d':' -f2 | awk '{$1=$1};1'
       args:
@@ -196,12 +210,13 @@
       retries: 300
       delay: 10
       failed_when: false
+      when: (pcs_host_primary != 'null')
 
 
 
 #3. Failover starts
 - name: Fail over from Primary to Secondary
-  hosts: hanadb02
+  hosts: hanas
   tasks:
     - name: set maintenance off (pcs managed mode on)
       command: pcs property set maintenance-mode=false
@@ -213,12 +228,13 @@
 
     - name: fail over to secondary
       shell: >
-        pcs resource move g_ip_HDB_00 hanadb02
+        pcs resource move g_ip_HDB_00
       become: yes
+      when: (pcs_host_secondary != 'null')
 
     - name: wait for status to be primary
       shell: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
+        source /usr/sap/HDB/HDB00/hdbenv.sh &&
         hdbnsutil -sr_state | grep 'operation mode{{":"}} primary'
       args:
         chdir: /usr/sap/HDB/HDB00
@@ -242,7 +258,7 @@
 
     - name: wait until system replication status is active
       shell: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
+        source /usr/sap/HDB/HDB00/hdbenv.sh &&
         python /usr/sap/HDB/HDB00/exe/python_support/systemReplicationStatus.py
         | grep '^overall system replication' | cut -d':' -f2 | awk '{$1=$1};1'
       args:
@@ -257,7 +273,7 @@
       when: (pcs_host_secondary != 'null')
 
 - name: upgrade (primary)
-  hosts: hanadb01
+  hosts: hanas
   pre_tasks:
     - name: set to maintenance
       command: pcs property set maintenance-mode=true
@@ -265,8 +281,8 @@
       when: (pcs_host_primary != 'null')
 
     - name: stop system replication
-      shell: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
+      shell: |
+        source /usr/sap/HDB/HDB00/hdbenv.sh
         sapcontrol -nr 00 -function StopSystem HDB
       args:
         chdir: /usr/sap/HDB/HDB00
@@ -276,8 +292,8 @@
        #become_method: su
 
     - name: unregister site
-      shell: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
+      shell: |
+        source /usr/sap/HDB/HDB00/hdbenv.sh
         hdbnsutil -sr_unregister --id=1
       args:
         chdir: /usr/sap/HDB/HDB00
@@ -301,15 +317,16 @@
       when: (pcs_host_primary != 'null')
 
 - name: stop HDB before register old-primary node to HSR
-  hosts: hanadb01
+  hosts: hanas
+  gather_facts: yes
   become: yes
   become_user: hdbadm
   tasks:
     - name: re-register site after upgrade
       shell: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
+        source /usr/sap/HDB/HDB00/hdbenv.sh &&
         hdbnsutil -sr_register --name=NewSite2
-        --remoteHost=hanadb02
+        --remoteHost={{ secondary }}
         --remoteInstance=00
         --replicationMode=syncmem
         --operationMode=logreplay
@@ -320,8 +337,8 @@
       when: (pcs_host_primary != 'null')
 
     - name: HDB start
-      shell: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
+      shell: |
+        source /usr/sap/HDB/HDB00/hdbenv.sh
         HDB start
       args:
         chdir: /usr/sap/HDB/HDB00
@@ -331,13 +348,13 @@
        #become_method: su
 
 - name: wait for system replication 
-  hosts: hanadb02
+  hosts: hanas
   become: yes
   become_user: hdbadm
   tasks:
     - name: wait until system replication status is active
       shell: >
-        source /usr/sap/HDB/home/.sapenv.sh &&
+        source /usr/sap/HDB/HDB00/hdbenv.sh &&
         python /usr/sap/HDB/HDB00/exe/python_support/systemReplicationStatus.py
         | grep '^overall system replication' | cut -d':' -f2 | awk '{$1=$1};1'
       args:
