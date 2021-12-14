@@ -127,7 +127,7 @@
   hosts: hanas
   roles:
     - role: oatakan.rhel_upgrade
-      update_reboot_kernel: yes
+      update_reboot_kernel: no
       become: no
       when: (pcs_host_secondary != 'null')
 
