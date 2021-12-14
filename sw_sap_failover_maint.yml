@@ -8,17 +8,11 @@
   gather_facts: yes
   tasks:
     - name: find hana role
-<<<<<<< HEAD
       shell: |
         source /usr/sap/HDB/HDB00/hdbenv.sh
-=======
-      shell: >
-        /usr/sap/HDB/home/.sapenv.sh && 
->>>>>>> f48aae79e4ce9325ed5e157a0c2ee28303d06f41
         /usr/sap/HDB/HDB00/exe/hdbnsutil -sr_state
       become: yes
       become_user: hdbadm
-<<<<<<< HEAD
       register: find_hana_role
 
     - name: set mode and index
@@ -68,60 +62,7 @@
       fail:
         msg: "replication status is not ACTIVE"
       when: (pcs_host_primary != 'null') and (replication_status.stdout != 'ACTIVE')
-=======
-#      become_method: su
-#      become_exe: sudo su -
-#      register: find_hana_role
 
-#    - name: set mode and index
-#      set_fact:
-#        pcs_mode: "{{ (find_hana_role.stdout_lines | select('match', '^mode: (.*)$') | list)[0] | regex_replace('^mode: (.*)$', '\\1') }}"
-#        pcs_site_id: "{{ (find_hana_role.stdout_lines | select('match', '^site id: (.*)$') | list)[0] | default('') | regex_replace('^site id: (.*)$', '\\1') }}"
-#    - name: set hana role
-#      set_fact:
-#        pcs_role: "{{ 'primary' if (pcs_mode == 'primary') else 'secondary' }}"
-#        pcs_host_primary: "{{ ansible_hostname if (pcs_mode == 'primary') else 'null'  }}"
-#        pcs_host_secondary: "{{ ansible_hostname if (pcs_mode != 'primary') else 'null' }}"
-#    - debug:
-#        msg: "primary host {{ pcs_host_primary }} and secondary host {{ pcs_host_secondary }}"
-#    - debug: 
-#        msg: "{{ pcs_role }}"
-
-#    - name: create groups
-#      add_host:
-#        hostname: "{{ item }}"
-#        ansible_hostname: "{{ hostvars[item].ansible_hostname }}"
-#        groups: hana_{{ hostvars[item].pcs_role }}
-#        sap_hana_role: "{{ hostvars[item].pcs_role }}"
-#        sap_hana_site_id: "{{ hostvars[item].pcs_site_id }}"
-#      loop: "{{ ansible_play_hosts }}"
-#    - debug:
-#        msg: "Ansible host name - {{ ansible_hostname }}, hana role{{sap_hana_role}}, site id {{sap_hana_site_id}}"
-
-
-#- name: check replication status (primary)
-#  hosts: hanadb01
-#  gather_facts: no
-#  become: yes
-#  become_user: hdbadm
-  #  #become_method: su
-#  tasks:
-#    - name: ensure replication status is currently ACTIVE
-#      shell: >
-#        source /usr/sap/HDB/home/.sapenv.sh &&
-#        python /usr/sap/HDB/HDB00/exe/python_support/systemReplicationStatus.py
-#        | grep '^overall system replication' | cut -d':' -f2 | awk '{$1=$1};1'
-#      args:
-#        chdir: /usr/sap/HDB/HDB00
-#      register: replication_status
-      #when: (pcs_host_primary != 'null')
-
-#    - name: fail when replication status is not ACTIVE
-#      fail:
-#        msg: "replication status is not ACTIVE"
-        #when: (pcs_host_primary != 'null') and (replication_status.stdout != 'ACTIVE')
->>>>>>> f48aae79e4ce9325ed5e157a0c2ee28303d06f41
-#      when: (replication_status.stdout != 'ACTIVE')
 
 - name: set to maintenance mode (secondary)
   hosts: hanas
@@ -130,25 +71,17 @@
     - name: set to maintenance
       command: pcs property set maintenance-mode=true
       become: yes
-#      when: (pcs_host_secondary != 'null')
+      when: (pcs_host_secondary != 'null')
 
     - name: stop system replication
-<<<<<<< HEAD
-      shell: |
+      shell: |        
         source /usr/sap/HDB/HDB00/hdbenv.sh
         sapcontrol -nr 00 -function StopSystem HDB
-=======
-      shell:
-        /usr/sap/HDB/HDB00/exe/sapcontrol -nr 00 -function StopSystem HDB
-#        sapcontrol -nr 00 -function StopSystem HDB
-#        source /usr/sap/HDB/home/.sapenv.sh &&
-#        sapcontrol -nr 00 -function StopSystem HDB
->>>>>>> f48aae79e4ce9325ed5e157a0c2ee28303d06f41
       args:
         chdir: /usr/sap/HDB/HDB00
       become: yes
       become_user: hdbadm
-#      when: (pcs_host_secondary != 'null')
+      when: (pcs_host_secondary != 'null')
        #become_method: su
 
 #Prep to failover
@@ -239,10 +172,6 @@
         - ('updating local ini files' not in reregister_site.stdout)
       until: reregister_site is success
 
-    #- name: reboot system
-     # reboot:
-     # become: yes
-
     - name: HDB start
       shell: |
         source /usr/sap/HDB/HDB00/hdbenv.sh
@@ -312,7 +241,6 @@
       become: yes
       become_user: hdbadm
       when: (pcs_host_secondary != 'null')
-       # #become_method: su
 
     - pause:
         seconds: 60
