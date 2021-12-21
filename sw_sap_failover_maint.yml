@@ -320,7 +320,11 @@
       shell: 
         pcs constraint remove cli-ban-g_ip_HDB_00-on-hanadb01
       when: (pcs_host_primary != 'null')
-
+    - name: Cleanup resources
+      shell:
+        pcs resource cleanup
+      when: (pcs_host_primary != 'null')
+      
 - name: stop HDB before register old-primary node to HSR
   hosts: hanas
   gather_facts: yes
