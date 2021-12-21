@@ -310,6 +310,16 @@
       update_reboot_kernel: yes
       become: no
       when: (pcs_host_primary != 'null')
+      
+- name: Make sure cluster resources can run on both nodes
+  hosts: hanas
+  gather_facts: yes
+  become: yes
+  tasks:
+    - name: Delete generated cluster location constraint
+      shell: 
+        pcs constraint remove cli-ban-g_ip_HDB_00-on-hanadb01
+      when: (pcs_host_primary != 'null')
 
 - name: stop HDB before register old-primary node to HSR
   hosts: hanas
@@ -330,7 +340,7 @@
       register: reregister_site
       ignore_errors: yes
       when: (pcs_host_primary != 'null')
-
+      
     - name: HDB start
       shell: |
         source /usr/sap/HDB/HDB00/hdbenv.sh
